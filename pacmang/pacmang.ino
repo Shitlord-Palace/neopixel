@@ -5,7 +5,7 @@
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
 // Game settings
-int SPEED_INCREMENT = 5;
+int SPEED_INCREMENT = 2;
 int GREEN_FOOD = 50;
 int BLUE_FOOD = 150;
 int RED_FOOD = 200;
@@ -14,7 +14,7 @@ int SPAWN_RATE = 6; // Spawn every 1/SPAWN_RATE ticks.
 // Power up active
 boolean _powered = false;
 // Current speed
-int _speed = 25;
+int _speed = 10;
 int _direction = 1;
 int _location = 0;
 // Color
@@ -31,6 +31,8 @@ const int POWER = 3;
 
 int _lastPress = 1;
 
+bool playOn = false;
+
 void setup() 
 {
   pixels.begin();
@@ -39,22 +41,28 @@ void setup()
 }
 
 void loop()
-{
-
-  
-    if (_r == 255 && _b == 255 && _g == 255) 
-    {
-      endState();
-    }
-    else
-    {
+{  
+   initialize();
+   while(playOn == true)
+   {
       play();
-    }
+   }
+}
+
+void initialize()
+{
+  for (int i = 0; i < 24; i++)
+  {
+    pixels.setPixelColor(i, pixels.Color(0, 0, 0));
+    _state[i] = EMPTY;
+  }
+  pixels.show();
+  playOn = true;
 }
 
 void play()
-{
-    
+{  
+    randomSeed(millis()); 
     int buttonPress = digitalRead(3);
     int lastPress = buttonPress;
     buttonPress = buttonPress ^ _lastPress;
@@ -70,8 +78,7 @@ void play()
     // Eat a pellet
     if (state == PELLET)
     {
-      _g = constrain (_g + GREEN_FOOD, 0, 255);
-      _speed += SPEED_INCREMENT;    
+      _g = constrain (_g + GREEN_FOOD, 0, 255);    
     }
     // Hit a ghost
     else if (state == GHOST)
@@ -87,6 +94,8 @@ void play()
       {
         _g = 1;
         _b = 1;
+        die();
+        return;
       }
     } 
     // Eat a power-up
@@ -94,19 +103,20 @@ void play()
     {
       _powered = true;
       _r = constrain(_r + RED_FOOD, 0, 255);
+      _speed += SPEED_INCREMENT;
     }
 
     // Set pacman colour
     if (_powered) 
     {
-      pixels.setPixelColor(pac, pixels.Color(255, 0, 0));
+      pixels.setPixelColor(pac, pixels.Color(255, 255, 255));
     }
     else
     {
-      pixels.setPixelColor(pac, pixels.Color(_r, _g, _b));
+      pixels.setPixelColor(pac, pixels.Color(100, 100, 0));
     }
     pixels.show();
-    delay(100);
+    delay(1000/_speed);
     
     pixels.setPixelColor(pac, pixels.Color(0, 0, 0));
     _state[_location] = EMPTY;
@@ -158,6 +168,23 @@ void spawn()
     pixels.show();
 }
 
+void die()
+{
+  playOn = false;
+  _speed = 10;
+    for (int i = 0; i < 24; i++)
+    {
+      if (i >= 0)pixels.setPixelColor(i, pixels.Color(100, 100, 0));
+      else pixels.setPixelColor(i, pixels.Color(0, 0, 0));
+      pixels.show();
+      delay(50);
+    }
+  
+
+  delay(1000);
+  initialize();
+  playOn = true;
+}
 
 void endState()
 {
